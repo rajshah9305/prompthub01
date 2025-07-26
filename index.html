@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Prompt Hub - Elite Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d1117;
+            color: #c9d1d9;
+        }
+        .nav-button.active {
+            background-color: #2563eb;
+            color: #ffffff;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+        }
+        .prompt-card {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+            position: relative;
+        }
+        .prompt-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+            border-color: #8b949e;
+        }
+        .modal {
+            transition: opacity 0.3s ease, backdrop-filter 0.3s ease;
+        }
+        .card-icon {
+            cursor: pointer;
+            color: #8b949e;
+            transition: color 0.2s ease-in-out, transform 0.2s ease-in-out;
+        }
+        .card-icon:hover {
+            transform: scale(1.1);
+        }
+        .favorite-icon.favorited {
+            color: #facc15; /* yellow-400 */
+        }
+        .edit-icon:hover {
+            color: #60a5fa; /* blue-400 */
+        }
+        .delete-button:hover {
+            color: #f87171; /* red-400 */
+        }
+        .copy-button .copy-icon, .copy-button .check-icon {
+            transition: transform 0.3s ease;
+        }
+        .copy-button.copied .copy-icon {
+            transform: scale(0);
+        }
+        .copy-button .check-icon {
+            transform: scale(0);
+            position: absolute;
+        }
+        .copy-button.copied .check-icon {
+            transform: scale(1);
+        }
+        .gradient-text {
+            background: linear-gradient(to right, #3b82f6, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        #tooltip {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <div class="container mx-auto px-4 py-8 md:py-16">
+        <!-- Header -->
+        <header class="text-center mb-10 md:mb-14">
+            <h1 class="text-4xl md:text-6xl font-extrabold text-white mb-3">System Prompt <span class="gradient-text">Hub</span></h1>
+            <p class="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto">Your daily instruction manual for smarter, more effective AI interaction.</p>
+        </header>
+
+        <!-- Controls -->
+        <div class="w-full max-w-4xl mx-auto mb-10 md:mb-14 space-y-6">
+            <!-- Search Bar -->
+            <div class="relative">
+                <input type="text" id="search-bar" placeholder="Search prompts..." class="w-full bg-gray-900/50 border border-gray-700/50 rounded-full py-3 px-6 text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all">
+                <svg class="absolute right-6 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                </svg>
+            </div>
+            
+            <!-- Filters -->
+            <div class="flex flex-col md:flex-row justify-center items-center gap-4">
+                <nav class="flex flex-wrap justify-center gap-3 md:gap-4 p-2 bg-gray-900/50 rounded-full border border-gray-700/50" id="filter-nav">
+                    <button class="nav-button active font-semibold py-2 px-5 rounded-full transition-all duration-300 text-gray-300 hover:bg-gray-700" data-filter="all">All</button>
+                    <button class="nav-button font-semibold py-2 px-5 rounded-full transition-all duration-300 text-gray-300 hover:bg-gray-700" data-filter="favorites">⭐ Favorites</button>
+                    <button class="nav-button font-semibold py-2 px-5 rounded-full transition-all duration-300 text-gray-300 hover:bg-gray-700" data-filter="personas">👤 Personas</button>
+                    <button class="nav-button font-semibold py-2 px-5 rounded-full transition-all duration-300 text-gray-300 hover:bg-gray-700" data-filter="writing">✍️ Writing</button>
+                    <button class="nav-button font-semibold py-2 px-5 rounded-full transition-all duration-300 text-gray-300 hover:bg-gray-700" data-filter="coding">💻 Coding</button>
+                    <button class="nav-button font-semibold py-2 px-5 rounded-full transition-all duration-300 text-gray-300 hover:bg-gray-700" data-filter="prompting">🚀 Prompting</button>
+                    <button class="nav-button font-semibold py-2 px-5 rounded-full transition-all duration-300 text-gray-300 hover:bg-gray-700" data-filter="productivity">🧠 Productivity</button>
+                </nav>
+                <button id="add-prompt-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-full transition-all duration-300 shadow-lg shadow-indigo-600/20 hover:shadow-indigo-500/40 shrink-0">
+                    Add New Prompt
+                </button>
+            </div>
+        </div>
+
+
+        <!-- Prompts Grid -->
+        <main id="prompts-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+            <!-- Prompts will be dynamically inserted here by JavaScript -->
+        </main>
+        <p id="no-results" class="text-center text-gray-400 mt-10 hidden">No prompts found. Try a different search or filter.</p>
+
+    </div>
+
+    <!-- Add/Edit Prompt Modal -->
+    <div id="prompt-modal" class="modal fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 hidden opacity-0">
+        <div class="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-2xl transform transition-all scale-95">
+            <form id="prompt-form" class="p-6 sm:p-8">
+                <input type="hidden" id="prompt-id">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 id="modal-title" class="text-2xl font-bold text-white">Add a New Prompt</h2>
+                    <button type="button" id="close-modal-btn" class="text-gray-500 hover:text-white transition-colors text-3xl leading-none">&times;</button>
+                </div>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label for="prompt-title" class="block text-sm font-medium text-gray-400 mb-2">Title</label>
+                        <input type="text" id="prompt-title" required class="w-full bg-gray-800 border border-gray-600 text-white rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors">
+                    </div>
+                    <div>
+                        <label for="prompt-description" class="block text-sm font-medium text-gray-400 mb-2">Description</label>
+                        <input type="text" id="prompt-description" required class="w-full bg-gray-800 border border-gray-600 text-white rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors">
+                    </div>
+                    <div>
+                        <label for="prompt-category" class="block text-sm font-medium text-gray-400 mb-2">Category</label>
+                        <select id="prompt-category" required class="w-full bg-gray-800 border border-gray-600 text-white rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors">
+                            <option value="personas">👤 Personas</option>
+                            <option value="writing">✍️ Writing</option>
+                            <option value="coding">💻 Coding</option>
+                            <option value="prompting">🚀 Prompting</option>
+                            <option value="productivity">🧠 Productivity</option>
+                            <option value="custom">✨ Custom</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="prompt-text" class="block text-sm font-medium text-gray-400 mb-2">Prompt Text</label>
+                        <textarea id="prompt-text" required rows="8" class="w-full bg-gray-800 border border-gray-600 text-white rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors"></textarea>
+                    </div>
+                </div>
+
+                <div class="mt-8 flex justify-end">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-lg transition-all duration-300 shadow-lg shadow-blue-600/20 hover:shadow-blue-500/40">Save Prompt</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tooltip -->
+    <div id="tooltip" class="bg-green-500 text-white font-bold py-2 px-4 rounded-full opacity-0 transform translate-y-4">Copied to clipboard!</div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // DOM Elements
+            const promptsGrid = document.getElementById('prompts-grid');
+            const addPromptBtn = document.getElementById('add-prompt-btn');
+            const promptModal = document.getElementById('prompt-modal');
+            const closeModalBtn = document.getElementById('close-modal-btn');
+            const promptForm = document.getElementById('prompt-form');
+            const modalTitle = document.getElementById('modal-title');
+            const promptIdInput = document.getElementById('prompt-id');
+            const searchBar = document.getElementById('search-bar');
+            const filterNav = document.getElementById('filter-nav');
+            const noResults = document.getElementById('no-results');
+            const tooltip = document.getElementById('tooltip');
+
+            // State
+            let prompts = [];
+            let favorites = JSON.parse(localStorage.getItem('promptFavorites')) || [];
+
+            const categoryMap = {
+                personas: { name: 'Personas', emoji: '👤', color: 'rose-500', hover: 'rose-400', tagBg: 'bg-rose-500/10', tagText: 'text-rose-400', borderColor: 'border-t-rose-500' },
+                writing: { name: 'Writing', emoji: '✍️', color: 'blue-600', hover: 'blue-500', tagBg: 'bg-blue-500/10', tagText: 'text-blue-400', borderColor: 'border-t-blue-500' },
+                coding: { name: 'Coding', emoji: '💻', color: 'green-600', hover: 'green-500', tagBg: 'bg-green-500/10', tagText: 'text-green-400', borderColor: 'border-t-green-500' },
+                prompting: { name: 'Prompting', emoji: '🚀', color: 'purple-600', hover: 'purple-500', tagBg: 'bg-purple-500/10', tagText: 'text-purple-400', borderColor: 'border-t-purple-500' },
+                productivity: { name: 'Productivity', emoji: '🧠', color: 'amber-500', hover: 'amber-400', tagBg: 'bg-amber-500/10', tagText: 'text-amber-400', borderColor: 'border-t-amber-500' },
+                custom: { name: 'Custom', emoji: '✨', color: 'pink-600', hover: 'pink-500', tagBg: 'bg-pink-500/10', tagText: 'text-pink-400', borderColor: 'border-t-pink-500' }
+            };
+
+            // --- Data Management ---
+            function savePrompts() {
+                localStorage.setItem('prompts', JSON.stringify(prompts));
+            }
+
+            function loadPrompts() {
+                const storedPrompts = localStorage.getItem('prompts');
+                if (storedPrompts) {
+                    prompts = JSON.parse(storedPrompts);
+                } else {
+                    prompts = getInitialPrompts();
+                    savePrompts();
+                }
+            }
+
+            // --- UI Rendering ---
+            function renderPrompts() {
+                promptsGrid.innerHTML = '';
+                const searchTerm = searchBar.value.toLowerCase();
+                const activeFilter = filterNav.querySelector('.active').dataset.filter;
+
+                const filteredPrompts = prompts.filter(p => {
+                    const matchesSearch = p.title.toLowerCase().includes(searchTerm) || p.description.toLowerCase().includes(searchTerm) || p.text.toLowerCase().includes(searchTerm);
+                    
+                    if (activeFilter === 'all') return matchesSearch;
+                    if (activeFilter === 'favorites') return favorites.includes(p.id) && matchesSearch;
+                    return p.category === activeFilter && matchesSearch;
+                });
+
+                if (filteredPrompts.length === 0) {
+                    noResults.classList.remove('hidden');
+                } else {
+                    noResults.classList.add('hidden');
+                }
+
+                filteredPrompts.forEach(prompt => {
+                    const card = createPromptCard(prompt);
+                    promptsGrid.appendChild(card);
+                });
+            }
+
+            function createPromptCard({ id, title, description, category, text }) {
+                const categoryInfo = categoryMap[category] || categoryMap.custom;
+                const card = document.createElement('div');
+                card.className = `prompt-card rounded-xl shadow-lg overflow-hidden flex flex-col border-t-4 ${categoryInfo.borderColor}`;
+                card.dataset.id = id;
+                card.dataset.category = category;
+
+                const isFavorited = favorites.includes(id);
+
+                const sanitizedText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+                card.innerHTML = `
+                    <div class="p-6 flex-grow flex flex-col">
+                        <div class="absolute top-3 right-3 flex items-center space-x-2">
+                            <div class="favorite-icon card-icon ${isFavorited ? 'favorited' : ''}" title="Favorite">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                            </div>
+                            <div class="edit-icon card-icon" title="Edit Prompt">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                            </div>
+                             <div class="delete-button card-icon" title="Delete Prompt">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </div>
+                        </div>
+                        <div class="flex-grow">
+                            <div class="flex justify-between items-center mb-3">
+                                <span class="${categoryInfo.tagBg} ${categoryInfo.tagText} text-xs font-bold px-3 py-1 rounded-full">${categoryInfo.name}</span>
+                            </div>
+                            <h3 class="text-xl font-bold text-white mb-2 pr-20">${title}</h3>
+                            <p class="text-gray-400 mb-4 text-sm">${description}</p>
+                        </div>
+                        <div class="bg-gray-900/70 border border-gray-700/50 rounded-lg p-4 text-sm text-gray-300 mt-auto max-h-64 overflow-y-auto">
+                            <pre class="whitespace-pre-wrap break-words"><code>${sanitizedText}</code></pre>
+                        </div>
+                    </div>
+                    <div class="bg-gray-800/50 p-4 border-t border-gray-700/50">
+                        <button class="copy-button w-full bg-${categoryInfo.color} hover:bg-${categoryInfo.hover} text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center relative transition-colors duration-300">
+                            <svg class="copy-icon w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                            <svg class="check-icon w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            <span class="button-text">Copy Prompt</span>
+                        </button>
+                    </div>
+                `;
+                return card;
+            }
+
+            // --- Modal Management ---
+            function openModal(prompt = null) {
+                promptForm.reset();
+                if (prompt) {
+                    modalTitle.textContent = 'Edit Prompt';
+                    promptIdInput.value = prompt.id;
+                    document.getElementById('prompt-title').value = prompt.title;
+                    document.getElementById('prompt-description').value = prompt.description;
+                    document.getElementById('prompt-category').value = prompt.category;
+                    document.getElementById('prompt-text').value = prompt.text;
+                } else {
+                    modalTitle.textContent = 'Add a New Prompt';
+                    promptIdInput.value = '';
+                }
+                promptModal.classList.remove('hidden');
+                setTimeout(() => {
+                    promptModal.classList.remove('opacity-0');
+                    promptModal.querySelector('div').classList.remove('scale-95');
+                }, 10);
+            }
+
+            function closeModal() {
+                promptModal.classList.add('opacity-0');
+                promptModal.querySelector('div').classList.add('scale-95');
+                setTimeout(() => {
+                    promptModal.classList.add('hidden');
+                }, 300);
+            }
+
+            // --- Event Handlers ---
+            addPromptBtn.addEventListener('click', () => openModal());
+            closeModalBtn.addEventListener('click', closeModal);
+            promptModal.addEventListener('click', (e) => e.target === promptModal && closeModal());
+            searchBar.addEventListener('input', renderPrompts);
+            
+            filterNav.addEventListener('click', (e) => {
+                if (e.target.tagName === 'BUTTON') {
+                    filterNav.querySelector('.active').classList.remove('active');
+                    e.target.classList.add('active');
+                    renderPrompts();
+                }
+            });
+
+            promptForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const id = promptIdInput.value;
+                const promptData = {
+                    title: document.getElementById('prompt-title').value,
+                    description: document.getElementById('prompt-description').value,
+                    category: document.getElementById('prompt-category').value,
+                    text: document.getElementById('prompt-text').value,
+                };
+
+                if (id) { // Editing existing prompt
+                    const index = prompts.findIndex(p => p.id === id);
+                    if (index !== -1) {
+                        prompts[index] = { ...prompts[index], ...promptData };
+                    }
+                } else { // Adding new prompt
+                    promptData.id = `prompt-${Date.now()}`;
+                    prompts.unshift(promptData);
+                }
+                
+                savePrompts();
+                renderPrompts();
+                closeModal();
+            });
+
+            promptsGrid.addEventListener('click', (e) => {
+                const target = e.target.closest('.card-icon, .copy-button');
+                if (!target) return;
+
+                const card = target.closest('.prompt-card');
+                const id = card.dataset.id;
+
+                if (target.closest('.copy-button')) handleCopy(target, card);
+                if (target.closest('.delete-button')) handleDelete(id, card);
+                if (target.closest('.favorite-icon')) handleFavorite(id, target.closest('.favorite-icon'));
+                if (target.closest('.edit-icon')) handleEdit(id);
+            });
+
+            // --- Action Handlers ---
+            function handleCopy(button, card) {
+                const codeBlock = card.querySelector('code');
+                navigator.clipboard.writeText(codeBlock.innerText).then(() => {
+                    tooltip.classList.remove('opacity-0', 'translate-y-4');
+                    setTimeout(() => {
+                        tooltip.classList.add('opacity-0', 'translate-y-4');
+                    }, 2000);
+                }).catch(err => console.error('Failed to copy text: ', err));
+            }
+
+            function handleDelete(id, card) {
+                if (confirm('Are you sure you want to delete this prompt?')) {
+                    prompts = prompts.filter(p => p.id !== id);
+                    favorites = favorites.filter(favId => favId !== id);
+                    savePrompts();
+                    localStorage.setItem('promptFavorites', JSON.stringify(favorites));
+                    card.style.transform = 'scale(0.9)';
+                    card.style.opacity = '0';
+                    setTimeout(() => renderPrompts(), 300);
+                }
+            }
+
+            function handleFavorite(id, icon) {
+                if (favorites.includes(id)) {
+                    favorites = favorites.filter(favId => favId !== id);
+                    icon.classList.remove('favorited');
+                } else {
+                    favorites.push(id);
+                    icon.classList.add('favorited');
+                }
+                localStorage.setItem('promptFavorites', JSON.stringify(favorites));
+                if (filterNav.querySelector('.active').dataset.filter === 'favorites') {
+                    renderPrompts();
+                }
+            }
+
+            function handleEdit(id) {
+                const promptToEdit = prompts.find(p => p.id === id);
+                if (promptToEdit) {
+                    openModal(promptToEdit);
+                }
+            }
+
+            // --- Initial Load ---
+            function getInitialPrompts() {
+                return [
+                    // Personas
+                    { id: 'persona-1', title: 'Aether: Master Digital Architect', description: 'A persona for designing and building elite, Awwwards-level digital experiences from concept to deployment.', category: 'personas', text: `You are Aether...` },
+                    { id: 'persona-2', title: 'Jarvis: Full-Stack Virtuoso', description: 'An ultimate AI coding powerhouse persona for creating industry-leading, production-ready applications.', category: 'personas', text: `You are Jarvis...` },
+                    { id: 'persona-3', title: 'Act as a Linux Terminal', description: 'Simulate a Linux terminal, executing commands and showing the corresponding output.', category: 'personas', text: `I want you to act as a linux terminal. I will type commands and you will reply with what the terminal should show. I want you to only reply with the terminal output inside one unique code block, and nothing else. do not write explanations. do not type commands unless I instruct you to do so. when i need to tell you something in english, i will do so by putting text inside curly brackets {like this}.`},
+                    { id: 'persona-4', title: 'Act as a UX/UI Developer', description: 'Assist with UI/UX development, providing suggestions on design, user flow, and implementation details.', category: 'personas', text: `I want you to act as a UX/UI developer. I will provide some details about the design of an application, website, or other digital product, and it will be your job to come up with creative ways to improve its user experience. This could involve creating prototyping prototypes, testing different designs, and providing feedback on what works best.`},
+                    { id: 'persona-5', title: 'Act as a Novelist', description: 'Assume the persona of a novelist to generate creative stories, plots, and character ideas.', category: 'personas', text: `I want you to act as a novelist. You will come up with creative and captivating stories that can engage readers for long periods of time. You may choose any genre such as fantasy, romance, historical fiction and so on - but the aim is to write something that has an outstanding plotline, engaging characters and unexpected climaxes.`},
+
+                    // Writing
+                    { id: 'writing-1', title: 'AIDA Copywriting Framework', description: 'Use the classic Attention-Interest-Desire-Action marketing framework to write compelling copy.', category: 'writing', text: `I want you to act as an expert copywriter. I will provide you with a product, service, or offer and you will create a marketing campaign using the AIDA (Attention-Interest-Desire-Action) framework...` },
+                    { id: 'writing-2', title: 'The Master Editor', description: 'Turns the AI into a meticulous editor that not only corrects but also explains its changes.', category: 'writing', text: `Act as a master copyeditor and writing coach. Your name is 'Prose'. Your goal is to help me improve my writing...\n1. **Correct:** Fix errors.\n2. **Refine:** Improve clarity.\n3. **Track Changes:** Show edits.\n4. **Summarize:** Provide feedback.` },
+                    { id: 'writing-3', title: 'Creative Content Generator', description: 'Use this for brainstorming and drafting engaging content from scratch for any topic.', category: 'writing', text: `You are a world-class content strategist and creative writer.\nFor any topic I provide, you will:\n1. **Brainstorm Angles**\n2. **Develop an Outline**\n3. **Draft the Content**\n4. **Specify Tone**` },
+                    { id: 'writing-4', title: 'Email Polisher', description: 'Refines a draft email to be more professional, clear, and effective.', category: 'writing', text: `Act as a corporate communications expert. I will provide a draft email. Your task is to polish it for clarity, professionalism, and impact. Provide the revised email and a short list of the key changes you made.\n\nDraft Email: [Paste your email draft here]` },
+                    { id: 'writing-5', title: 'Analogy Generator', description: 'Creates simple, clear analogies to explain complex topics.', category: 'writing', text: `Act as an expert at creating analogies. I will provide a complex topic. Your task is to generate three distinct, simple, and relatable analogies to explain it. For each analogy, briefly explain how the components of the analogy map to the components of the topic.\n\nTopic: [Insert complex topic here]` },
+
+                    // Coding
+                    { id: 'coding-1', title: 'Cline - AI for your terminal', description: 'The main system prompt for the Cline AI command-line tool. It is helpful, concise, and an expert in all things terminal.', category: 'coding', text: `You are Cline, an AI for your terminal.\nYour responses are concise.\nYou are an expert in all things terminal... You will always respond in markdown and wrap commands in \`\`\`sh.` },
+                    { id: 'coding-2', title: 'Devin AI - Software Engineer', description: 'The core system prompt for the Devin AI, designed to act as an autonomous software engineer.', category: 'coding', text: `You are Devin, an AI software engineer. You are an expert at understanding a user's request and figuring out how to implement it... You should think step-by-step... write a plan... and then carry out your plan using tools.` },
+                    { id: 'coding-3', title: 'Cursor - Agent v1.2', description: 'The agent prompt for Cursor, an AI-first code editor. This prompt guides the AI to use tools.', category: 'coding', text: `You are an AI programming assistant named Cursor. Follow the user's requirements carefully... You are working in a large project... break down the task into a series of smaller steps... then execute the steps in order.` },
+                    { id: 'coding-4', title: 'v0 - UI Generation', description: 'The system prompt for v0 by Vercel, an AI tool that generates React UI components from text prompts.', category: 'coding', text: `You are an expert at building React components. You are a user of the v0 platform... think step-by-step... write a plan... use tools to generate and iterate on components.` },
+                    { id: 'coding-5', title: 'Code Refactorer', description: 'Suggests improvements to a piece of code for better readability and performance.', category: 'coding', text: `Act as a senior software architect. I will provide a function or code block. Your task is to analyze it and suggest specific ways to refactor it for improved readability, efficiency, and maintainability. Present your answer as a "before" and "after" code block, and explain the benefits of your changes.\n\nCode to Refactor: [Paste your code here]` },
+
+                    // Prompting
+                    { id: 'prompting-1', title: 'Full-Stack Project Generation', description: 'A structured prompt for generating a complete, production-ready personal project from scratch.', category: 'prompting', text: `This is a personal project intended strictly for personal use. Generate production-ready code with real-world implementation across all stages—backend, frontend, and deployment... The entire codebase must be error-free... Structure it as a GitHub-ready repository... ready to deploy directly on Vercel.` },
+                    { id: 'prompting-2', title: 'Code Extension & Completion', description: 'A structured prompt for analyzing an existing codebase and providing precise, new code additions.', category: 'prompting', text: `I have uploaded my existing code... need you to complete/extend this by delivering the complete code... show me ONLY the new code I need to add and tell me exactly WHERE to place it.\n\nFormat your response as follows:\n📍 Location: ...\n📦 New Code: ...\n📝 Instructions: ...` },
+                    { id: 'prompting-3', title: 'Persona Crafter', description: 'Creates a detailed, effective persona for the AI to adopt.', category: 'prompting', text: `You are a prompt engineering specialist. I need to make the AI adopt a specific persona. I will tell you the role I want. You will write a detailed persona description for the AI to use as a system prompt, including its name, expertise, personality traits, and rules of engagement.\n\nDesired Role: [e.g., A skeptical financial analyst, A cheerful travel guide]` },
+                    { id: 'prompting-4', title: 'The Prompt Refiner', description: 'A meta-prompting tool to help you write better, more effective prompts for any AI model.', category: 'prompting', text: `You are an expert Prompt Engineer. Your job is to help me improve my prompts.\nWhen I give you a draft prompt, you will:\n1. **Analyze my Goal**\n2. **Identify Weaknesses**\n3. **Rewrite the Prompt**\n4. **Explain Your Changes**` },
+                    { id: 'prompting-5', title: 'Chain-of-Thought Deconstructor', description: 'Breaks a complex request into a step-by-step thinking process for the AI.', category: 'prompting', text: `I have a complex task for an AI that requires multiple steps of reasoning. I will state the task. You will rephrase it as a prompt that instructs the AI to use a "chain of thought" or "step-by-step" process. Your prompt should explicitly tell the AI to think through the problem before giving the final answer.\n\nMy Task: [Describe your complex task]` },
+
+                    // Productivity
+                    { id: 'productivity-1', title: 'SWOT Analysis', description: 'Generate a comprehensive SWOT (Strengths, Weaknesses, Opportunities, Threats) analysis.', category: 'productivity', text: `I want you to act as a business consultant. I will provide you with a company, and you will create a SWOT analysis for it. Your analysis should be thorough and well-researched, and it should provide actionable insights... Your SWOT analysis should include: Strengths, Weaknesses, Opportunities, and Threats.` },
+                    { id: 'productivity-2', title: 'Perplexity - Conversational Search', description: 'System prompt for Perplexity AI. Focuses on being a helpful, accurate, and sourced conversational AI.', category: 'productivity', text: `You are a large language model from Perplexity. You are a helpful, harmless, and accurate AI assistant... You should be able to provide detailed and informative answers... You should be able to provide sources for your answers.` },
+                    { id: 'productivity-3', title: 'Meeting Summarizer', description: 'Creates a concise summary of a meeting transcript or notes.', category: 'productivity', text: `Act as an executive assistant. I will provide you with raw text from meeting notes or a transcript. Your task is to produce a concise, professional summary. The summary should include:\n1. **Key Decisions**\n2. **Main Discussion Points**\n3. **Action Items** (Table with Task, Owner, Due Date)` },
+                    { id: 'productivity-4', title: 'Learning Plan Creator', description: 'Generates a structured learning plan for any new topic.', category: 'productivity', text: `You are an academic advisor and curriculum designer. I want to learn a new skill or topic. You will create a structured, week-by-week learning plan for me. The plan should include key sub-topics, recommended resources, and a small project for each week.\n\nTopic to Learn: [e.g., "React.js"]` },
+                    { id: 'productivity-5', title: 'Decision Framework', description: 'Applies a decision-making framework to a problem.', category: 'productivity', text: `You are a strategy consultant. I will provide a situation or decision I need to make, along with a decision-making framework. Your task is to structure my information within that framework to help me analyze my options.\n\nSituation: [Describe your situation]\nFramework: [e.g., SWOT Analysis, Eisenhower Matrix]` }
+                ].map(p => ({ ...p, id: p.id || `prompt-${Math.random().toString(36).substr(2, 9)}` }));
+            }
+
+            loadPrompts();
+            renderPrompts();
+        });
+    </script>
+
+</body>
+</html>
